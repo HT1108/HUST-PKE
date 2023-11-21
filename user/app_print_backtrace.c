@@ -5,7 +5,7 @@
 
 #include "user_lib.h"
 #include "util/types.h"
-
+void print_backtrace(int l);
 void f8() { print_backtrace(7); }
 void f7() { f8(); }
 void f6() { f7(); }
@@ -20,4 +20,8 @@ int main(void) {
   f1();
   exit(0);
   return 0;
+}
+
+void print_backtrace(int l){
+
 }
