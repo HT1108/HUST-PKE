@@ -59,9 +59,15 @@ void handle_user_page_fault(uint64 mcause, uint64 sepc, uint64 stval) {
       // hint: first allocate a new physical page, and then, maps the new page to the
       // virtual address that causes the page fault.
       // panic( "You need to implement the operations that actually handle the page fault in lab2_3.\n" );
+
+      // brackets to fix error:a label can only be part of a statement and a declaration is not a statement
+      {
+        void* pa = alloc_page();
+        user_vm_map((pagetable_t)current->pagetable, ROUNDDOWN(stval, PGSIZE),
+                    PGSIZE, (uint64)pa,
+                    prot_to_type(PROT_WRITE | PROT_READ, 1));
+      }
       
-      void* pa = alloc_page();
-      user_vm_map((pagetable_t)current->pagetable, ROUNDDOWN(stval, PGSIZE), PGSIZE, (uint64)pa, prot_to_type(PROT_WRITE | PROT_READ, 1));
       
       break;
     default:
