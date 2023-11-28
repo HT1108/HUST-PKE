@@ -184,14 +184,17 @@ int do_fork( process* parent)
     // browse parent's vm space, and copy its trapframe and data segments,
     // map its code segment.
     switch( parent->mapped_info[i].seg_type ){
-      case CONTEXT_SEGMENT:
+      case CONTEXT_SEGMENT:{
         *child->trapframe = *parent->trapframe;
         break;
-      case STACK_SEGMENT:
+      }
+        
+      case STACK_SEGMENT:{
         memcpy( (void*)lookup_pa(child->pagetable, child->mapped_info[STACK_SEGMENT].va),
           (void*)lookup_pa(parent->pagetable, parent->mapped_info[i].va), PGSIZE );
         break;
-      case HEAP_SEGMENT:
+      }
+      case HEAP_SEGMENT:{
         // build a same heap for child process.
 
         // convert free_pages_address into a filter to skip reclaimed blocks in the heap
@@ -221,7 +224,8 @@ int do_fork( process* parent)
         // copy the heap manager from parent to child
         memcpy((void*)&child->user_heap, (void*)&parent->user_heap, sizeof(parent->user_heap));
         break;
-      case CODE_SEGMENT:
+      }
+      case CODE_SEGMENT:{
         // TODO (lab3_1): implment the mapping of child code segment to parent's
         // code segment.
         // hint: the virtual address mapping of code segment is tracked in mapped_info
@@ -244,6 +248,7 @@ int do_fork( process* parent)
         child->mapped_info[child->total_mapped_region].seg_type = CODE_SEGMENT;
         child->total_mapped_region++;
         break;
+      }
     }
   }
 
