@@ -653,7 +653,7 @@ int rfs_readdir(struct vinode *dir_vinode, struct dir *dir, int *offset) {
   
   memcpy(dir->name, p_direntry->name, MAX_DENTRY_NAME_LEN);
   dir->inum = p_direntry->inum;
-  // DO NOT DELETE CODE BELOW.
+  // DO NOT DELETE CODE BELOW
   (*offset)++;
   return 0;
 }
