@@ -9,7 +9,7 @@
 #include "pmm.h"
 #include "vmm.h"
 #include "util/functions.h"
-
+#include "memlayout.h"
 #include "spike_interface/spike_utils.h"
 
 //
@@ -62,6 +62,10 @@ void handle_user_page_fault(uint64 mcause, uint64 sepc, uint64 stval) {
 
       // brackets to fix error:a label can only be part of a statement and a declaration is not a statement
       {
+        if (stval > USER_STACK_TOP || stval < (USER_STACK_TOP - STACK_SIZE * 20)){
+          panic("this address is not available!");
+        }
+
         void* pa = alloc_page();
         user_vm_map((pagetable_t)current->pagetable, ROUNDDOWN(stval, PGSIZE),
                     PGSIZE, (uint64)pa,
