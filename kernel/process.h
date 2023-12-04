@@ -22,8 +22,7 @@ typedef struct trapframe_t {
 // riscv-pke kernel supports at most 32 processes
 #define NPROC 32
 // maximum number of pages in a process's heap
-#define MAX_HEAP_PAGES 32
-
+#define MAX_HEAP_PAGES 32                                                                                                                                                      
 // possible status of a process
 enum proc_status {
   FREE,            // unused state
@@ -92,7 +91,9 @@ typedef struct process_t {
   int tick_count;
 
   // file system. added @lab4_1
-  proc_file_management *pfiles;
+  proc_file_management* pfiles;
+
+  char cwd[MAX_PATH_LEN];
 }process;
 
 // switch to run user app

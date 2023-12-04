@@ -3,8 +3,10 @@
  */
 
 #include "vfs.h"
-
+#include "proc_file.h"
+#include "process.h"
 #include "pmm.h"
+#include "vmm.h"
 #include "spike_interface/spike_utils.h"
 #include "util/string.h"
 #include "util/types.h"
@@ -111,9 +113,22 @@ struct super_block *vfs_mount(const char *dev_name, int mnt_type) {
 struct file *vfs_open(const char *path, int flags) {
   struct dentry *parent = vfs_root_dentry; // we start the path lookup from root.
   char miss_name[MAX_PATH_LEN];
+  char path_resolved[MAX_PATH_LEN];
+  memset(path_resolved, 0, MAX_PATH_LEN);
+  struct dentry* file_dentry = NULL;
+  if (path[0] == '.') {// relative path
 
+    memset(path_resolved, 0, MAX_PATH_LEN);
+    resolve_relative_path(path_resolved, (char*)path);
+
+    file_dentry = lookup_final_dentry(path_resolved, &parent, miss_name);
+  }
+  else {
+    memcpy(path_resolved, path, MAX_PATH_LEN);
+    file_dentry = lookup_final_dentry(path, &parent, miss_name);
+  }
   // path lookup.
-  struct dentry *file_dentry = lookup_final_dentry(path, &parent, miss_name);
+
 
   // file does not exist
   if (!file_dentry) {
@@ -122,8 +137,8 @@ struct file *vfs_open(const char *path, int flags) {
     // create the file if O_CREAT bit is set
     if (creatable) {
       char basename[MAX_PATH_LEN];
-      get_base_name(path, basename);
-
+      get_base_name(path_resolved, basename);
+      //sprint("basename: %s\nmissname: %s\n", basename, miss_name);
       // a missing directory exists in the path
       if (strcmp(miss_name, basename) != 0) {
         sprint("vfs_open: cannot create file in a non-exist directory!\n");
@@ -511,7 +526,7 @@ struct dentry *lookup_final_dentry(const char *path, struct dentry **parent,
                                    char *miss_name) {
   char path_copy[MAX_PATH_LEN];
   strcpy(path_copy, path);
-
+  //sprint("lookup: %s\n", path);
   // split the path, and retrieves a token at a time.
   // note: strtok() uses a static (local) variable to store the input path
   // string at the first time it is called. thus it can out a token each time.
@@ -529,7 +544,8 @@ struct dentry *lookup_final_dentry(const char *path, struct dentry **parent,
       this = alloc_vfs_dentry(token, NULL, *parent);
       // lookup subfolder/file in its parent directory. note:
       // hostfs and rfs will take different procedures for lookup.
-      struct vinode *found_vinode = viop_lookup((*parent)->dentry_inode, this);
+      struct vinode* found_vinode = viop_lookup((*parent)->dentry_inode, this);
+      
       if (found_vinode == NULL) {
         // not found in both hash table and directory file on disk.
         free_page(this);
@@ -556,6 +572,7 @@ struct dentry *lookup_final_dentry(const char *path, struct dentry **parent,
     // get next token
     token = strtok(NULL, "/");
   }
+  //sprint("this found:%s\n", this->name);
   return this;
 }
 
@@ -721,3 +738,4 @@ struct vinode *default_alloc_vinode(struct super_block *sb) {
 }
 
 struct file_system_type *fs_list[MAX_SUPPORTED_FS];
+
