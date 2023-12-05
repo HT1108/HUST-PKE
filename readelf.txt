@@ -1,0 +1,124 @@
+ELF 头：
+  Magic：   7f 45 4c 46 02 01 01 00 00 00 00 00 00 00 00 00 
+  类别:                              ELF64
+  数据:                              2 补码，小端序 (little endian)
+  Version:                           1 (current)
+  OS/ABI:                            UNIX - System V
+  ABI 版本:                          0
+  类型:                              EXEC (可执行文件)
+  系统架构:                          RISC-V
+  版本:                              0x1
+  入口点地址：               0x810000a2
+  程序头起点：          64 (bytes into file)
+  Start of section headers:          14768 (bytes into file)
+  标志：             0x5, RVC, double-float ABI
+  Size of this header:               64 (bytes)
+  Size of program headers:           56 (bytes)
+  Number of program headers:         1
+  Size of section headers:           64 (bytes)
+  Number of section headers:         18
+  Section header string table index: 17
+
+节头：
+  [号] 名称              类型             地址              偏移量
+       大小              全体大小          旗标   链接   信息   对齐
+  [ 0]                   NULL             0000000000000000  00000000
+       0000000000000000  0000000000000000           0     0     0
+  [ 1] .text             PROGBITS         0000000081000000  00001000
+       0000000000000392  0000000000000000  AX       0     0     2
+  [ 2] .rodata.str1.8    PROGBITS         0000000081000398  00001398
+       000000000000002b  0000000000000001 AMS       0     0     8
+  [ 3] .rodata           PROGBITS         00000000810003c4  000013c4
+       0000000000000058  0000000000000000   A       0     0     4
+  [ 4] .debug_info       PROGBITS         0000000000000000  0000141c
+       00000000000007b7  0000000000000000           0     0     1
+  [ 5] .debug_abbrev     PROGBITS         0000000000000000  00001bd3
+       0000000000000307  0000000000000000           0     0     1
+  [ 6] .debug_aranges    PROGBITS         0000000000000000  00001eda
+       0000000000000090  0000000000000000           0     0     1
+  [ 7] .debug_line       PROGBITS         0000000000000000  00001f6a
+       0000000000000899  0000000000000000           0     0     1
+  [ 8] .debug_str        PROGBITS         0000000000000000  00002803
+       00000000000001a7  0000000000000001  MS       0     0     1
+  [ 9] .debug_line_str   PROGBITS         0000000000000000  000029aa
+       00000000000000d7  0000000000000001  MS       0     0     1
+  [10] .comment          PROGBITS         0000000000000000  00002a81
+       0000000000000012  0000000000000001  MS       0     0     1
+  [11] .riscv.attributes RISCV_ATTRIBUTE  0000000000000000  00002a93
+       0000000000000035  0000000000000000           0     0     1
+  [12] .debug_frame      PROGBITS         0000000000000000  00002ac8
+       00000000000002d8  0000000000000000           0     0     8
+  [13] .debug_loclists   PROGBITS         0000000000000000  00002da0
+       0000000000000727  0000000000000000           0     0     1
+  [14] .debug_rnglists   PROGBITS         0000000000000000  000034c7
+       0000000000000097  0000000000000000           0     0     1
+  [15] .symtab           SYMTAB           0000000000000000  00003560
+       0000000000000300  0000000000000018          16    18     8
+  [16] .strtab           STRTAB           0000000000000000  00003860
+       000000000000007d  0000000000000000           0     0     1
+  [17] .shstrtab         STRTAB           0000000000000000  000038dd
+       00000000000000d0  0000000000000000           0     0     1
+Key to Flags:
+  W (write), A (alloc), X (execute), M (merge), S (strings), I (info),
+  L (link order), O (extra OS processing required), G (group), T (TLS),
+  C (compressed), x (unknown), o (OS specific), E (exclude),
+  D (mbind), p (processor specific)
+
+There are no section groups in this file.
+
+程序头：
+  Type           Offset             VirtAddr           PhysAddr
+                 FileSiz            MemSiz              Flags  Align
+  LOAD           0x0000000000001000 0x0000000081000000 0x0000000081000000
+                 0x000000000000041c 0x000000000000041c  R E    0x1000
+
+ Section to Segment mapping:
+  段节...
+   00     .text .rodata.str1.8 .rodata 
+
+There is no dynamic section in this file.
+
+该文件中没有重定位信息。
+
+The decoding of unwind sections for machine type RISC-V is not currently supported.
+
+Symbol table '.symtab' contains 32 entries:
+   Num:    Value          Size Type    Bind   Vis      Ndx Name
+     0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND 
+     1: 0000000081000000     0 SECTION LOCAL  DEFAULT    1 .text
+     2: 0000000081000398     0 SECTION LOCAL  DEFAULT    2 .rodata.str1.8
+     3: 00000000810003c4     0 SECTION LOCAL  DEFAULT    3 .rodata
+     4: 0000000000000000     0 SECTION LOCAL  DEFAULT    4 .debug_info
+     5: 0000000000000000     0 SECTION LOCAL  DEFAULT    5 .debug_abbrev
+     6: 0000000000000000     0 SECTION LOCAL  DEFAULT    6 .debug_aranges
+     7: 0000000000000000     0 SECTION LOCAL  DEFAULT    7 .debug_line
+     8: 0000000000000000     0 SECTION LOCAL  DEFAULT    8 .debug_str
+     9: 0000000000000000     0 SECTION LOCAL  DEFAULT    9 .debug_line_str
+    10: 0000000000000000     0 SECTION LOCAL  DEFAULT   10 .comment
+    11: 0000000000000000     0 SECTION LOCAL  DEFAULT   11 .riscv.attributes
+    12: 0000000000000000     0 SECTION LOCAL  DEFAULT   12 .debug_frame
+    13: 0000000000000000     0 SECTION LOCAL  DEFAULT   13 .debug_loclists
+    14: 0000000000000000     0 SECTION LOCAL  DEFAULT   14 .debug_rnglists
+    15: 0000000000000000     0 FILE    LOCAL  DEFAULT  ABS app_print_backtrace.c
+    16: 0000000000000000     0 FILE    LOCAL  DEFAULT  ABS user_lib.c
+    17: 0000000000000000     0 FILE    LOCAL  DEFAULT  ABS snprintf.c
+    18: 0000000081000190   514 FUNC    GLOBAL DEFAULT    1 vsnprintf
+    19: 0000000081000016    20 FUNC    GLOBAL DEFAULT    1 f7
+    20: 000000008100003e    20 FUNC    GLOBAL DEFAULT    1 f5
+    21: 000000008100016a    38 FUNC    GLOBAL DEFAULT    1 print_backtrace
+    22: 0000000081000066    20 FUNC    GLOBAL DEFAULT    1 f3
+    23: 000000008100007a    20 FUNC    GLOBAL DEFAULT    1 f2
+    24: 00000000810000a2    40 FUNC    GLOBAL DEFAULT    1 main
+    25: 00000000810000ca    24 FUNC    GLOBAL DEFAULT    1 do_user_call
+    26: 0000000081000000    22 FUNC    GLOBAL DEFAULT    1 f8
+    27: 0000000081000052    20 FUNC    GLOBAL DEFAULT    1 f4
+    28: 000000008100008e    20 FUNC    GLOBAL DEFAULT    1 f1
+    29: 00000000810000e2    98 FUNC    GLOBAL DEFAULT    1 printu
+    30: 0000000081000144    38 FUNC    GLOBAL DEFAULT    1 exit
+    31: 000000008100002a    20 FUNC    GLOBAL DEFAULT    1 f6
+
+No version information found in this file.
+Attribute Section: riscv
+File Attributes
+  Tag_RISCV_stack_align: 16-bytes
+  Tag_RISCV_arch: "rv64i2p0_m2p0_a2p0_f2p0_d2p0_c2p0"

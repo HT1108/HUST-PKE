@@ -8,10 +8,7 @@
 #include "riscv.h"
 #include "spike_interface/spike_utils.h"
 
-typedef struct elf_info_t {
-  spike_file_t *f;
-  process *p;
-} elf_info;
+
 
 //
 // the implementation of allocater. allocates memory space for later segment loading
@@ -75,10 +72,7 @@ elf_status elf_load(elf_ctx *ctx) {
   return EL_OK;
 }
 
-typedef union {
-  uint64 buf[MAX_CMDLINE_ARGS];
-  char *argv[MAX_CMDLINE_ARGS];
-} arg_buf;
+
 
 //
 // returns the number (should be 1) of string(s) after PKE kernel in command line.
