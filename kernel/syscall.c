@@ -93,47 +93,26 @@ ssize_t sys_user_printbacktrace(uint64 layer) {
       elf_fpread(&elfloader, strnbuf, sectiontable[i].sh_size, sectiontable[i].sh_offset);
     }
   }
-  //debug
-  // for (int i = 0; i < symnum; i++) {
-  //   sprint("%x %d %s\n", sym_tab[i].st_value, sym_tab[i].st_name, strnbuf + sym_tab[i].st_name);
-  // }
+  
 
   
   
   int nowlayer = layer;
   uint64 ra = 0;
   uint64 fp = current->trapframe->regs.s0;// 当前函数的fp
-  uint64 savedfp = 0;// 原fp
+  uint64 savedfp = *(uint64*)(fp - 8);;// 原fp
   while (nowlayer > 0) {
-    if (nowlayer == layer) {
-      //调用的最后一级，不会将ra入栈,当前fp指向原fp，原fp指向ra
-      savedfp = *(uint64*)(fp - 8);
-      ra = *(uint64*)(savedfp - 8);
-      // 查找ra位于哪一个函数
-      for (int i = 0; i < symnum; i++) {
-        if (ra >= sym_tab[i].st_value && ra <= (sym_tab[i].st_value + sym_tab[i].st_size) && strcmp(strnbuf + sym_tab[i].st_name, "main") == 0) {
-          return 0;
-        }
-        if (ra >= sym_tab[i].st_value && ra <= sym_tab[i].st_value + sym_tab[i].st_size) {
-          sprint("%s\n", strnbuf + sym_tab[i].st_name);
-        }
+    ra = *(uint64*)(savedfp - 8);
+    // 查找ra位于哪一个函数
+    for (int i = 0; i < symnum; i++) {
+      if (ra >= sym_tab[i].st_value && ra <= (sym_tab[i].st_value + sym_tab[i].st_size) && strcmp(strnbuf + sym_tab[i].st_name, "main") == 0) {
+        return 0;
       }
-      savedfp = *(uint64*)(savedfp - 16);
-    }
-    else {
-      // 当前函数的ra保存在fp-8位置
-      ra = *(uint64*)(savedfp - 8);
-      // 查找ra位于哪一个函数
-      for (int i = 0; i < symnum; i++) {
-        if (ra >= sym_tab[i].st_value && ra <= sym_tab[i].st_value + sym_tab[i].st_size && strcmp(strnbuf + sym_tab[i].st_name, "main") == 0) {
-          return 0;
-        }
-        if (ra >= sym_tab[i].st_value && ra <= sym_tab[i].st_value + sym_tab[i].st_size) {
-          sprint("%s\n", strnbuf + sym_tab[i].st_name);
-        }
+      if (ra >= sym_tab[i].st_value && ra <= sym_tab[i].st_value + sym_tab[i].st_size) {
+        sprint("%s\n", strnbuf + sym_tab[i].st_name);
       }
-      savedfp = *(uint64*)(savedfp - 16);
     }
+    savedfp = *(uint64*)(savedfp - 16);
     nowlayer--;
   }
 
