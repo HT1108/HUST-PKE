@@ -80,7 +80,7 @@ typedef struct
   uint32	sh_info;		/* Additional section information */
   uint64	sh_addralign;		/* Section alignment */
   uint64	sh_entsize;		/* Entry size if section holds table */
-} elf_shtbl;
+} elf_sh;
 
 // .symtab 符号表结构
 typedef struct {

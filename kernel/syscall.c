@@ -65,7 +65,7 @@ ssize_t sys_user_printbacktrace(uint64 layer) {
   elf_ctx* elf = NULL;
   arg_buf arg;
   int argc = parse_args(&arg);
-  elf_shtbl sectiontable[50];
+  elf_sh sectiontable[50];
   elf_ctx elfloader;
   elf_info info;
   elf_sym sym_tab[50];
@@ -79,37 +79,33 @@ ssize_t sys_user_printbacktrace(uint64 layer) {
   elf_fpread(&elfloader, sectiontable, elfloader.ehdr.shentsize * elfloader.ehdr.shnum, elfloader.ehdr.shoff);
 
   int symnum = 0;// num of symbols
-  // 在section header table中查找符号表地址
+  // 在section header table中查找符号表和string table
   for (int i = 0; i < elfloader.ehdr.shnum; i++) {
     if (sectiontable[i].sh_type == SHT_SYMTAB) {
       elf_fpread(&elfloader, sym_tab, sectiontable[i].sh_size, sectiontable[i].sh_offset);
       symnum = sectiontable[i].sh_size / sectiontable[i].sh_entsize;  // 计算符号数量
     }
-  }
-  // 读取string table
-  for (int i = 0; i < elfloader.ehdr.shnum; i++) {
+
     // elf有两个 type == 3 的 section，其中 shstrndx 指向的是section name，不是函数名表
     if (sectiontable[i].sh_type == 3 && i != elfloader.ehdr.shstrndx) {
       elf_fpread(&elfloader, strnbuf, sectiontable[i].sh_size, sectiontable[i].sh_offset);
     }
   }
   
-
-  
   
   int nowlayer = layer;
   uint64 ra = 0;
   uint64 fp = current->trapframe->regs.s0;// 当前函数的fp
-  uint64 savedfp = *(uint64*)(fp - 8);;// 原fp
+  uint64 savedfp = *(uint64*)(fp - 8);// 原fp
   while (nowlayer > 0) {
     ra = *(uint64*)(savedfp - 8);
     // 查找ra位于哪一个函数
     for (int i = 0; i < symnum; i++) {
-      if (ra >= sym_tab[i].st_value && ra <= (sym_tab[i].st_value + sym_tab[i].st_size) && strcmp(strnbuf + sym_tab[i].st_name, "main") == 0) {
-        return 0;
-      }
       if (ra >= sym_tab[i].st_value && ra <= sym_tab[i].st_value + sym_tab[i].st_size) {
         sprint("%s\n", strnbuf + sym_tab[i].st_name);
+        if (strcmp(strnbuf + sym_tab[i].st_name, "main") == 0) {
+          return 0;
+        }
       }
     }
     savedfp = *(uint64*)(savedfp - 16);
