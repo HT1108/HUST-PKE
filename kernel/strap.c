@@ -62,7 +62,7 @@ void handle_user_page_fault(uint64 mcause, uint64 sepc, uint64 stval) {
 
       // brackets to fix error:a label can only be part of a statement and a declaration is not a statement
       {
-        if (stval > USER_STACK_TOP || stval < (USER_STACK_TOP - STACK_SIZE * 20)){
+      if (stval < current->trapframe->regs.sp || stval > USER_STACK_TOP) {
           panic("this address is not available!");
         }
 
