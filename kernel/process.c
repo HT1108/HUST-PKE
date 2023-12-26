@@ -264,6 +264,7 @@ int do_fork( process* parent)
         uint64 va = parent->mapped_info[i].va;
         uint64 pa = (uint64)alloc_page();
         user_vm_map(child->pagetable, va, PGSIZE, pa, prot_to_type(PROT_READ | PROT_WRITE, 1));
+        memcpy((void*)pa, (void*)lookup_pa(parent->pagetable, parent->mapped_info[i].va), PGSIZE);
         child->mapped_info[child->total_mapped_region].va = va;
         child->mapped_info[child->total_mapped_region].npages = parent->mapped_info[i].npages;
         child->mapped_info[child->total_mapped_region].seg_type = DATA_SEGMENT;
