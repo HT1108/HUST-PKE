@@ -117,14 +117,11 @@ struct file *vfs_open(const char *path, int flags) {
   memset(path_resolved, 0, MAX_PATH_LEN);
   struct dentry* file_dentry = NULL;
   if (path[0] == '.') {// relative path
-
     memset(path_resolved, 0, MAX_PATH_LEN);
     resolve_relative_path(path_resolved, (char*)path);
-
     file_dentry = lookup_final_dentry(path_resolved, &parent, miss_name);
   }
   else {
-    memcpy(path_resolved, path, MAX_PATH_LEN);
     file_dentry = lookup_final_dentry(path, &parent, miss_name);
   }
   // path lookup.
