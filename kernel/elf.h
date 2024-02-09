@@ -84,7 +84,7 @@ typedef struct elf_ctx_t {
 
 elf_status elf_init(elf_ctx *ctx, void *info);
 elf_status elf_load(elf_ctx *ctx);
-
-void load_bincode_from_host_elf(process *p);
+void make_addr_line(elf_ctx* ctx, char* debug_line, uint64 length);
+void load_bincode_from_host_elf(process* p);
 
 #endif
