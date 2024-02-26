@@ -10,8 +10,12 @@
 #include "util/string.h"
 #include "spike_interface/spike_utils.h"
 #include "util/functions.h"
+extern uint64 block_num;
+extern memblock block[128];
+extern uint64 busy_block_num;
+extern memblock busy_block[128];
 
-/* --- utility functions for virtual address mapping --- */
+ /* --- utility functions for virtual address mapping --- */
 //
 // establish mapping of virtual address [va, va+size] to phyiscal address [pa, pa+size]
 // with the permission of "perm".
@@ -142,6 +146,10 @@ void kern_vm_init(void) {
   sprint("physical address of _etext is: 0x%lx\n", lookup_pa(t_page_dir, (uint64)_etext));
 
   g_kernel_pagetable = t_page_dir;
+
+  // added lab2_challenge2
+  block_num = 0;
+  
 }
 
 /* --- user page table part --- */

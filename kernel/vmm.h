@@ -21,6 +21,13 @@ uint64 lookup_pa(pagetable_t pagetable, uint64 va);
 // pointer to kernel page directory
 extern pagetable_t g_kernel_pagetable;
 
+typedef struct memblock_t {
+  uint64 start;
+  uint64 end;
+  uint64 size;
+} memblock;
+
+
 void kern_vm_map(pagetable_t page_dir, uint64 va, uint64 pa, uint64 sz, int perm);
 
 // Initialize the kernel pagetable
