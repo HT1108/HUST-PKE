@@ -47,6 +47,7 @@ static uint64 elf_fpread(elf_ctx* ctx, void* dest, uint64 nb, uint64 offset) {
   // *dest) for nb bytes.
   return spike_file_pread(msg->f, dest, nb, offset);
 }
+char dbgbuf[16392];
 static void handle_illegal_instruction() {
   
   elf_ctx elfloader;
@@ -67,14 +68,14 @@ static void handle_illegal_instruction() {
   int index = elfloader.ehdr.shstrndx;
   elf_fpread(&elfloader, strnbuf, sectiontable[index].size, sectiontable[index].offset);
   
-  char dbgbuf[4096];
+ 
   debug_header dbgheader;
   // 查找debug_line段
   for (int i = 1; i < elfloader.ehdr.shnum; i++) {
     if (!strcmp(strnbuf + sectiontable[i].name, ".debug_line")) {
       elf_fpread(&elfloader, dbgbuf, sectiontable[i].size, sectiontable[i].offset);
       elf_fpread(&elfloader, &dbgheader, sizeof(debug_header), sectiontable[i].offset);// 读取debug_line header
-      make_addr_line(&elfloader, dbgbuf, dbgheader.length);
+      make_addr_line(&elfloader, dbgbuf, sectiontable[i].size);
       break;
     }
   }
@@ -89,7 +90,7 @@ static void handle_illegal_instruction() {
       filename = current->file[current->line[i].file].file;
       dir = current->dir[current->file[current->line[i].file].dir];
       sprint("Runtime error at %s/%s:%d\n", dir, filename, linenum);
-      break;
+      //break;
     }
   }
   char path[50];
