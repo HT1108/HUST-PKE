@@ -96,6 +96,39 @@ ssize_t sys_user_yield() {
   return 0;
 }
 
+ssize_t sys_user_newsem(int val) {
+  int freesem = -1;
+  for (int i = 0; i < 5; i++) {
+    if (!occupy[i]) {
+      freesem = i;
+      break;
+    }
+  }
+  if (freesem == -1) panic("no semaphore available!");
+  sem[freesem].val = val;
+  sem[freesem].head = sem[freesem].tail = 0;
+  occupy[freesem] = 1;
+  return freesem;
+}
+
+ssize_t sys_user_semP(uint64 nsem) {
+  
+  sem[nsem].val--;
+  if (sem[nsem].val >= 0) return 0;
+  sem[nsem].waitingqueue[sem[nsem].tail++ % 5] = current;
+  //insert_to_ready_queue(current);
+  schedule();
+  return 0;
+}
+
+ssize_t sys_user_semV(uint64 nsem) {
+  
+  sem[nsem].val++;
+  if (sem[nsem].val > 0) return 0;
+  insert_to_ready_queue(sem[nsem].waitingqueue[sem[nsem].head++ % 5]);
+  //schedule();
+  return 0;
+}
 //
 // [a0]: the syscall number; [a1] ... [a7]: arguments to the syscalls.
 // returns the code of success, (e.g., 0 means success, fail for otherwise)
@@ -115,6 +148,12 @@ long do_syscall(long a0, long a1, long a2, long a3, long a4, long a5, long a6, l
       return sys_user_fork();
     case SYS_user_yield:
       return sys_user_yield();
+    case SYS_user_newsem:
+      return sys_user_newsem(a1);
+    case SYS_user_semP:
+      return sys_user_semP(a1);
+    case SYS_user_semV:
+      return sys_user_semV(a1);
     default:
       panic("Unknown syscall %ld \n", a0);
   }

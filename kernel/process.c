@@ -32,6 +32,9 @@ process procs[NPROC];
 // current points to the currently running user-mode application.
 process* current = NULL;
 
+// semaphore array
+semaphore sem[5];
+int occupy[5];
 //
 // switch to a user-mode process
 //
