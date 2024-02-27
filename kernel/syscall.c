@@ -71,9 +71,48 @@ uint64 sys_user_allocate_page(uint64 size) {
     busy_block_num++;
     return va;
   }
-
-  // 查找大小合适的块
   int blockindex = 0;
+  for (blockindex = 0; blockindex < block_num; blockindex++) {
+    if (block[blockindex].size >= size) break;
+  }
+  // 没有足够大的块，申请新页面
+  if (blockindex == block_num) {
+    memblock lastfreeblock;
+    lastfreeblock.end = 0;
+    // 找到最后一个（end最大的）空闲块
+    for (int i = 0; i < block_num; i++) {
+      if (block[i].end > lastfreeblock.end) {
+        lastfreeblock = block[i];
+        // 后续空闲块前移，删除块
+        for (int j = i; j < block_num - 1; j++) {
+          block[j] = block[j + 1];
+        }
+      }
+    }
+    // 申请新页面
+    void* pa = alloc_page();
+    va = g_ufree_page;
+    g_ufree_page += PGSIZE;
+    user_vm_map((pagetable_t)current->pagetable, va, PGSIZE, (uint64)pa,
+      prot_to_type(PROT_WRITE | PROT_READ, 1));
+    lastfreeblock.end += PGSIZE;
+    lastfreeblock.size += PGSIZE;
+    // 修改后的空闲块插入数组
+    for (int i = block_num; i >= 0; i--) {
+      if (i == 0) {
+        block[i] = lastfreeblock;
+        break;
+      }
+      if (block[i - 1].size >= lastfreeblock.size) {
+        block[i] = block[i - 1];
+      }
+      else {
+        block[i] = lastfreeblock;
+      }
+    }
+  }
+
+  // 查找大小合适的块并分配内存
   for (blockindex = 0; blockindex < block_num; blockindex++) {
     if (block[blockindex].size >= size) {
       va = block[blockindex].start;
@@ -123,6 +162,8 @@ uint64 sys_user_allocate_page(uint64 size) {
     }
     
   }
+
+  
 
   return va;
 }
