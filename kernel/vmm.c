@@ -19,7 +19,6 @@
 int map_pages(pagetable_t page_dir, uint64 va, uint64 size, uint64 pa, int perm) {
   uint64 first, last;
   pte_t *pte;
-
   for (first = ROUNDDOWN(va, PGSIZE), last = ROUNDDOWN(va + size - 1, PGSIZE);
       first <= last; first += PGSIZE, pa += PGSIZE) {
     if ((pte = page_walk(page_dir, first, 1)) == 0) return -1;
@@ -191,8 +190,8 @@ void user_vm_unmap(pagetable_t page_dir, uint64 va, uint64 size, int free) {
   pte_t* pte = page_walk(page_dir, va, 0);
   if (pte != NULL) {
     uint64 pa = PTE2PA(*pte);
-    free_page((void*)pa);
-    *pte = (~(PTE_V) & *pte) | PTE_V;
+    if (free) free_page((void*)pa);
+    *pte = (~(PTE_V) & *pte);
   }
 }
 

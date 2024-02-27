@@ -14,9 +14,16 @@
 #include "vmm.h"
 #include "sched.h"
 #include "proc_file.h"
+#include "elf.h"
+#include "vfs.h"
 
 #include "spike_interface/spike_utils.h"
+#include "util/types.h"
 
+typedef struct elf_info_vfs_t {
+  int f;
+  process* p;
+}elf_info_vfs;
 //
 // implement the SYS_user_print syscall
 //
@@ -215,6 +222,91 @@ ssize_t sys_user_unlink(char * vfn){
   return do_unlink(pfn);
 }
 
+static uint64 elf_fpread_vfs(elf_ctx* ctx, void* dest, uint64 nb, uint64 offset) {
+  elf_info_vfs* msg = (elf_info_vfs*)ctx->info;
+  do_lseek(msg->f, offset, SEEK_SET);
+  return do_read(msg->f, dest, nb);
+}
+
+elf_status elf_init_vfs(elf_ctx* ctx, void* info) {
+  ctx->info = info;
+  // load the elf header
+  if (elf_fpread_vfs(ctx, &ctx->ehdr, sizeof(ctx->ehdr), 0) != sizeof(ctx->ehdr)) return EL_EIO;
+
+  // check the signature (magic value) of the elf
+  if (ctx->ehdr.magic != ELF_MAGIC) return EL_NOTELF;
+  return EL_OK;
+}
+
+int reload_elf(elf_ctx* ctx) {
+  elf_prog_header ph_addr;
+  int i, off;
+  process* proc = (process*)(((elf_info_vfs*)(ctx->info))->p);
+  for (int i = 0; i < proc->total_mapped_region; i++) {
+    if (proc->mapped_info[i].seg_type == CODE_SEGMENT || proc->mapped_info[i].seg_type == DATA_SEGMENT) {
+    
+      user_vm_unmap((pagetable_t)proc->pagetable, proc->mapped_info[i].va, PGSIZE, 1);
+      proc->mapped_info[i].va = 0;
+      proc->total_mapped_region--;
+    }
+  }
+  
+  // traverse the elf program segment headers
+  for (i = 0, off = ctx->ehdr.phoff; i < ctx->ehdr.phnum; i++, off += sizeof(ph_addr)) {
+    
+    if (elf_fpread_vfs(ctx, (void*)&ph_addr, sizeof(ph_addr), off) != sizeof(ph_addr)) return EL_EIO;
+    if (ph_addr.type != ELF_PROG_LOAD) continue;
+    void* dest;
+    int j = 0;
+    
+    // SEGMENT_READABLE, SEGMENT_EXECUTABLE, SEGMENT_WRITABLE are defined in kernel/elf.h
+    if (ph_addr.flags == (SEGMENT_READABLE | SEGMENT_EXECUTABLE)) {
+      for (j = 0; j < PGSIZE / sizeof(mapped_region); j++) //seek the last mapped region
+        if ((process*)(((elf_info_vfs*)(ctx->info))->p)->mapped_info[j].va == 0x0) break;
+      dest = alloc_page();
+      if (elf_fpread_vfs(ctx, dest, ph_addr.memsz, ph_addr.off) != ph_addr.memsz)
+        return EL_EIO;
+      user_vm_map((pagetable_t)proc->pagetable, ph_addr.vaddr, PGSIZE, (uint64)dest, prot_to_type(PROT_EXEC | PROT_READ, 1));
+      
+      ((process*)(((elf_info_vfs*)(ctx->info))->p))->mapped_info[j].va = ph_addr.vaddr;
+      proc->total_mapped_region++;
+      sprint("CODE_SEGMENT added at mapped info offset:%d\n", j);
+    }
+    else if (ph_addr.flags == (SEGMENT_READABLE | SEGMENT_WRITABLE)) {
+      for (j = 0; j < PGSIZE / sizeof(mapped_region); j++) //seek the last mapped region
+        if ((process*)(((elf_info_vfs*)(ctx->info))->p)->mapped_info[j].va == 0x0) break;
+      dest = alloc_page();
+      if (elf_fpread_vfs(ctx, dest, ph_addr.memsz, ph_addr.off) != ph_addr.memsz)
+        return EL_EIO;
+      user_vm_map((pagetable_t)proc->pagetable, ph_addr.vaddr, PGSIZE, (uint64)dest, prot_to_type(PROT_WRITE | PROT_READ, 1));
+      ((process*)(((elf_info_vfs*)(ctx->info))->p))->mapped_info[j].va = ph_addr.vaddr;
+    
+      proc->total_mapped_region++;
+      sprint("DATA_SEGMENT added at mapped info offset:%d\n", j);
+    }
+    else
+      panic("unknown program segment encountered, segment flag:%d.\n", ph_addr.flags);
+  }
+  return 0;
+}
+
+ssize_t sys_user_exec(uint64 path) {
+  
+  elf_ctx elfloader;
+  memset(&elfloader, 0, sizeof(elfloader));
+  elf_info_vfs info;
+  info.p = current;
+  
+  char buf[500];
+  info.f = sys_user_open((char*)path, O_RDWR);
+  if (info.f == -1) panic("file open failed");
+  if (elf_init_vfs(&elfloader, &info) != EL_OK)
+    panic("fail to init elfloader.\n");
+  reload_elf(&elfloader);
+  current->trapframe->epc = elfloader.ehdr.entry;
+  return 0;
+}
+
 //
 // [a0]: the syscall number; [a1] ... [a7]: arguments to the syscalls.
 // returns the code of success, (e.g., 0 means success, fail for otherwise)
@@ -262,7 +354,9 @@ long do_syscall(long a0, long a1, long a2, long a3, long a4, long a5, long a6, l
     case SYS_user_link:
       return sys_user_link((char *)a1, (char *)a2);
     case SYS_user_unlink:
-      return sys_user_unlink((char *)a1);
+      return sys_user_unlink((char*)a1);
+    case SYS_user_exec:
+      return sys_user_exec(a1);
     default:
       panic("Unknown syscall %ld \n", a0);
   }
