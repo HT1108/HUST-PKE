@@ -97,12 +97,15 @@ void m_start(uintptr_t hartid, uintptr_t dtb) {
   // init the spike file interface (stdin,stdout,stderr)
   // functions with "spike_" prefix are all defined in codes under spike_interface/,
   // sprint is also defined in spike_interface/spike_utils.c
-  if (!hartid) {
+
+  if (hartid == 0) {
+    sprint("%d\n", hartid);
     spike_file_init();
     // init HTIF (Host-Target InterFace) and memory by using the Device Table Blob (DTB)
     // init_dtb() is defined above.
     init_dtb(dtb);
   }
+  
   sync_barrier(&initbarrier, NCPU);
 
   sprint("In m_start, hartid:%d\n", hartid);

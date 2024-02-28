@@ -35,10 +35,11 @@ void enable_paging() {
 // load the elf, and construct a "process" (with only a trapframe).
 // load_bincode_from_host_elf is defined in elf.c
 //
-void load_user_program(process *proc) {
-  sprint("User application is loading.\n");
-  // allocate a page to store the trapframe. alloc_page is defined in kernel/pmm.c. added @lab2_1
+void load_user_program(process* proc) {
   uint64 hartid = read_tp();
+  sprint("hartid = %d: User application is loading.\n", hartid);
+  // allocate a page to store the trapframe. alloc_page is defined in kernel/pmm.c. added @lab2_1
+  
   proc->trapframe = (trapframe*)alloc_page();
   memset(proc->trapframe, 0, sizeof(trapframe));
 
@@ -53,7 +54,7 @@ void load_user_program(process *proc) {
   // USER_STACK_TOP = 0x7ffff000, defined in kernel/memlayout.h
   proc->trapframe->regs.sp = USER_STACK_TOP;  //virtual address of user stack top
 
-  sprint("hartid = ?: user frame 0x%lx, user stack 0x%lx, user kstack 0x%lx \n", proc->trapframe,
+  sprint("hartid = %d: user frame 0x%lx, user stack 0x%lx, user kstack 0x%lx \n", hartid, proc->trapframe,
          proc->trapframe->regs.sp, proc->kstack);
 
   // load_bincode_from_host_elf() is defined in kernel/elf.c
@@ -77,22 +78,32 @@ void load_user_program(process *proc) {
 //
 // s_start: S-mode entry point of riscv-pke OS kernel.
 //
+int pmminit = 0;
+
 int s_start(void) {
   uint64 hartid;
   asm volatile("mv %0, tp" : "=r"(hartid));
   
   sprint("hartid = %d: Enter supervisor mode...\n", hartid);
 
+  // g_ufree_page 如果在switch_to初始化会导致系统调用返回时再次初始化，从而每次都得到同样的虚拟地址
+  // 因此选择在s_start设置初值
+  g_ufree_page[hartid] = USER_FREE_ADDRESS_START;
   // in the beginning, we use Bare mode (direct) memory mapping as in lab1.
   // but now, we are going to switch to the paging mode @lab2_1.
   // note, the code still works in Bare mode when calling pmm_init() and kern_vm_init().
   write_csr(satp, 0);
 
-  // init phisical memory manager
-  pmm_init();
+  if (!hartid) {
+    // init phisical memory manager
+    pmm_init();
+    // build the kernel page table
+    kern_vm_init();
+    
+  }
+  sync_barrier(&pmminit, NCPU);
 
-  // build the kernel page table
-  kern_vm_init();
+
 
   // now, switch to paging mode by turning on paging (SV39)
   enable_paging();
