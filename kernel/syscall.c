@@ -304,6 +304,7 @@ ssize_t sys_user_exec(uint64 path) {
     panic("fail to init elfloader.\n");
   reload_elf(&elfloader);
   current->trapframe->epc = elfloader.ehdr.entry;
+  do_close(info.f);
   return 0;
 }
 
