@@ -58,7 +58,7 @@ static void handle_illegal_instruction() {
   
   info.f = spike_file_open(arg.argv[0], O_RDONLY, 0);
   info.p = current;
-  elf_sect_header sectiontable[50];
+  elf_sect_header sectiontable[20];
   elf_init(&elfloader, &info);// 读取elf头
   //读取section header
   elf_fpread(&elfloader, sectiontable, elfloader.ehdr.shentsize * elfloader.ehdr.shnum, elfloader.ehdr.shoff);
