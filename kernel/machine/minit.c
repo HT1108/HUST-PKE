@@ -93,18 +93,20 @@ void timerinit(uintptr_t hartid) {
 int initialized = 0;
 int initbarrier = 0;
 void m_start(uintptr_t hartid, uintptr_t dtb) {
+  write_tp(hartid);
   // init the spike file interface (stdin,stdout,stderr)
   // functions with "spike_" prefix are all defined in codes under spike_interface/,
   // sprint is also defined in spike_interface/spike_utils.c
-  if (!initialized) {
+  if (!hartid) {
     spike_file_init();
     // init HTIF (Host-Target InterFace) and memory by using the Device Table Blob (DTB)
     // init_dtb() is defined above.
     init_dtb(dtb);
+    
   }
-  sync_barrier(&initbarrier, 2);
+  sync_barrier(&initbarrier, NCPU);
   sprint("In m_start, hartid:%d\n", hartid);
-
+  
   // save the address of trap frame for interrupt in M mode to "mscratch". added @lab1_2
   write_csr(mscratch, &g_itrframe);
 

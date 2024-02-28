@@ -10,30 +10,37 @@
 #include "string.h"
 #include "process.h"
 #include "util/functions.h"
-
+#include "sync_utils.h"
 #include "spike_interface/spike_utils.h"
 
 //
 // implement the SYS_user_print syscall
 //
 ssize_t sys_user_print(const char* buf, size_t n) {
-  uint64 x;
-  asm volatile("mv %0, sp" : "=r"(x));
-  sprint("hartid = %d: %s\n", x, buf);
+  uint64 hartid;
+  asm volatile("mv %0, tp" : "=r"(hartid));
+  sprint("hartid = %d: %s\n", hartid, buf);
   return 0;
 }
 
 //
 // implement the SYS_user_exit syscall
 //
+int exitcounter = 0;
 ssize_t sys_user_exit(uint64 code) {
-  uint64 x;
-  asm volatile("mv %0, sp" : "=r"(x));
-  sprint("hartid = %d: User exit with code:%d.\n", x, code);
+  uint64 hartid;
+  asm volatile("mv %0, tp" : "=r"(hartid));
+  sprint("hartid = %d: User exit with code:%d.\n", hartid, code);
   // in lab1, PKE considers only one app (one process). 
   // therefore, shutdown the system when the app calls exit()
-  sprint("hartid = %d: shutdown with code:%d.\n", x, code);
-  shutdown(code);
+  sync_barrier(&exitcounter, NCPU);
+  if (!hartid) {
+    sprint("hartid = %d: shutdown with code:%d.\n", hartid, code);
+    shutdown(code);
+  }
+  
+  
+  return 0;
 }
 
 //
@@ -45,6 +52,7 @@ long do_syscall(long a0, long a1, long a2, long a3, long a4, long a5, long a6, l
     case SYS_user_print:
       return sys_user_print((const char*)a1, a2);
     case SYS_user_exit:
+      
       return sys_user_exit(a1);
     default:
       panic("Unknown syscall %ld \n", a0);
