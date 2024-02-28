@@ -17,7 +17,9 @@
 // implement the SYS_user_print syscall
 //
 ssize_t sys_user_print(const char* buf, size_t n) {
-  sprint("hartid = ?: %s\n", buf);
+  uint64 x;
+  asm volatile("mv %0, sp" : "=r"(x));
+  sprint("hartid = %d: %s\n", x, buf);
   return 0;
 }
 
@@ -25,10 +27,12 @@ ssize_t sys_user_print(const char* buf, size_t n) {
 // implement the SYS_user_exit syscall
 //
 ssize_t sys_user_exit(uint64 code) {
-  sprint("hartid = ?: User exit with code:%d.\n", code);
+  uint64 x;
+  asm volatile("mv %0, sp" : "=r"(x));
+  sprint("hartid = %d: User exit with code:%d.\n", x, code);
   // in lab1, PKE considers only one app (one process). 
   // therefore, shutdown the system when the app calls exit()
-  sprint("hartid = ?: shutdown with code:%d.\n", code);
+  sprint("hartid = %d: shutdown with code:%d.\n", x, code);
   shutdown(code);
 }
 
