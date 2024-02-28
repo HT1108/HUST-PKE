@@ -22,7 +22,7 @@ extern char smode_trap_vector[];
 extern void return_to_user(trapframe *, uint64 satp);
 
 // current points to the currently running user-mode application.
-process* current = NULL;
+process* current[NCPU];
 
 // points to the first free page in our simple heap. added @lab2_2
 uint64 g_ufree_page = USER_FREE_ADDRESS_START;
@@ -32,7 +32,11 @@ uint64 g_ufree_page = USER_FREE_ADDRESS_START;
 //
 void switch_to(process* proc) {
   assert(proc);
-  current = proc;
+  
+  uint64 hartid = read_tp();
+  current[hartid] = proc;
+  // 转到用户程序执行之前需要将正确的HARTID写入trapframe，restore_all_registers时写入tp寄存器，之后用户程序才能正确获取到hartid
+  proc->trapframe->regs.tp = hartid;
 
   // write the smode_trap_vector (64-bit func. address) defined in kernel/strap_vector.S
   // to the stvec privilege register, such that trap handler pointed by smode_trap_vector

@@ -13,6 +13,7 @@
 #include "pmm.h"
 #include "vmm.h"
 #include "spike_interface/spike_utils.h"
+#include "sync_utils.h"
 
 //
 // implement the SYS_user_print syscall
@@ -20,8 +21,12 @@
 ssize_t sys_user_print(const char* buf, size_t n) {
   // buf is now an address in user space of the given app's user stack,
   // so we have to transfer it into phisical address (kernel is running in direct mapping).
-  assert( current );
+  assert(current);
+  uint64 hartid;
+  asm volatile("mv %0, tp" : "=r"(hartid));
+
   char* pa = (char*)user_va_to_pa((pagetable_t)(current->pagetable), (void*)buf);
+  sprint("hartid = %d: %s\n", hartid, pa);
   sprint(pa);
   return 0;
 }
@@ -29,12 +34,21 @@ ssize_t sys_user_print(const char* buf, size_t n) {
 //
 // implement the SYS_user_exit syscall
 //
+int exitcounter = 0;
 ssize_t sys_user_exit(uint64 code) {
-  sprint("hartid = ?: User exit with code:%d.\n", code);
+  uint64 hartid;
+  asm volatile("mv %0, tp" : "=r"(hartid));
+  sprint("hartid = %d: User exit with code:%d.\n", hartid, code);
+
   // in lab1, PKE considers only one app (one process). 
   // therefore, shutdown the system when the app calls exit()
-  sprint("hartid = ?: shutdown with code:%d.\n", code);
-  shutdown(code);
+  sync_barrier(&exitcounter, NCPU);
+  if (!hartid) {
+    sprint("hartid = %d: shutdown with code:%d.\n", hartid, code);
+    shutdown(code);
+  }
+  return 0;
+
 }
 
 //

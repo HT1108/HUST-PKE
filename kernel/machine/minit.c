@@ -7,14 +7,14 @@
 #include "kernel/config.h"
 #include "spike_interface/spike_utils.h"
 
-//
-// global variables are placed in the .data section.
-// stack0 is the privilege mode stack(s) of the proxy kernel on CPU(s)
-// allocates 4KB stack space for each processor (hart)
-//
-// NCPU is defined to be 1 in kernel/config.h, as we consider only one HART in basic
-// labs.
-//
+ //
+ // global variables are placed in the .data section.
+ // stack0 is the privilege mode stack(s) of the proxy kernel on CPU(s)
+ // allocates 4KB stack space for each processor (hart)
+ //
+ // NCPU is defined to be 1 in kernel/config.h, as we consider only one HART in basic
+ // labs.
+ //
 __attribute__((aligned(16))) char stack0[4096 * NCPU];
 
 // sstart() is the supervisor state entry point defined in kernel/kernel.c
@@ -63,8 +63,8 @@ static void delegate_traps() {
   // macros used in following two statements are defined in kernel/riscv.h
   uintptr_t interrupts = MIP_SSIP | MIP_STIP | MIP_SEIP;
   uintptr_t exceptions = (1U << CAUSE_MISALIGNED_FETCH) | (1U << CAUSE_FETCH_PAGE_FAULT) |
-                         (1U << CAUSE_BREAKPOINT) | (1U << CAUSE_LOAD_PAGE_FAULT) |
-                         (1U << CAUSE_STORE_PAGE_FAULT) | (1U << CAUSE_USER_ECALL);
+    (1U << CAUSE_BREAKPOINT) | (1U << CAUSE_LOAD_PAGE_FAULT) |
+    (1U << CAUSE_STORE_PAGE_FAULT) | (1U << CAUSE_USER_ECALL);
 
   // writes 64-bit values (interrupts and exceptions) to 'mideleg' and 'medeleg' (two
   // priviledged registers of RV64G machine) respectively.
@@ -90,16 +90,22 @@ void timerinit(uintptr_t hartid) {
 //
 // m_start: machine mode C entry point.
 //
+int initialized = 0;
+int initbarrier = 0;
 void m_start(uintptr_t hartid, uintptr_t dtb) {
+  write_tp(hartid);
   // init the spike file interface (stdin,stdout,stderr)
   // functions with "spike_" prefix are all defined in codes under spike_interface/,
   // sprint is also defined in spike_interface/spike_utils.c
-  spike_file_init();
-  sprint("In m_start, hartid:%d\n", hartid);
+  if (!hartid) {
+    spike_file_init();
+    // init HTIF (Host-Target InterFace) and memory by using the Device Table Blob (DTB)
+    // init_dtb() is defined above.
+    init_dtb(dtb);
+  }
+  sync_barrier(&initbarrier, NCPU);
 
-  // init HTIF (Host-Target InterFace) and memory by using the Device Table Blob (DTB)
-  // init_dtb() is defined above.
-  init_dtb(dtb);
+  sprint("In m_start, hartid:%d\n", hartid);
 
   // save the address of trap frame for interrupt in M mode to "mscratch". added @lab1_2
   write_csr(mscratch, &g_itrframe);
