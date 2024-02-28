@@ -61,11 +61,14 @@ void handle_user_page_fault(uint64 mcause, uint64 sepc, uint64 stval) {
       // panic( "You need to implement the operations that actually handle the page fault in lab2_3.\n" );
 
       // brackets to fix error:a label can only be part of a statement and a declaration is not a statement
-      {
-        void* pa = alloc_page();
-        user_vm_map((pagetable_t)current->pagetable, ROUNDDOWN(stval, PGSIZE),
-                    PGSIZE, (uint64)pa,
-                    prot_to_type(PROT_WRITE | PROT_READ, 1));
+      
+    {
+      uint64 hartid;
+      asm volatile("mv %0, tp" : "=r"(hartid));
+      void* pa = alloc_page();
+      user_vm_map((pagetable_t)current[hartid]->pagetable, ROUNDDOWN(stval, PGSIZE),
+                  PGSIZE, (uint64)pa,
+                  prot_to_type(PROT_WRITE | PROT_READ, 1));
       }
       
       
