@@ -112,7 +112,7 @@ int do_read(int fd, char *buf, uint64 count) {
   char buffer[count + 1];
   int len = vfs_read(pfile, buffer, count);
   buffer[count] = '\0';
-  strcpy(buf, buffer);
+  memcpy(buf, buffer, len);
   return len;
 }
 

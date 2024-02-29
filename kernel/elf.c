@@ -10,12 +10,17 @@
 #include "pmm.h"
 #include "vfs.h"
 #include "spike_interface/spike_utils.h"
+#include "proc_file.h"
 
 typedef struct elf_info_t {
   struct file *f;
   process *p;
 } elf_info;
 
+typedef struct elf_info_t_vfs {
+  struct file* f;
+  process* p;
+} elf_info_vfs;
 //
 // the implementation of allocater. allocates memory space for later segment loading.
 // this allocater is heavily modified @lab2_1, where we do NOT work in bare mode.
@@ -58,6 +63,22 @@ elf_status elf_init(elf_ctx *ctx, void *info) {
   return EL_OK;
 }
 
+static uint64 elf_fpread_vfs(elf_ctx* ctx, void* dest, uint64 nb, uint64 offset) {
+  elf_info_vfs* msg = (elf_info_vfs*)ctx->info;
+  vfs_lseek(msg->f, offset, SEEK_SET);
+  return vfs_read(msg->f, dest, nb);
+}
+
+static elf_status elf_init_vfs(elf_ctx* ctx, void* info) {
+  ctx->info = info;
+  // load the elf header
+  if (elf_fpread_vfs(ctx, &ctx->ehdr, sizeof(ctx->ehdr), 0) != sizeof(ctx->ehdr)) return EL_EIO;
+
+  // check the signature (magic value) of the elf
+  if (ctx->ehdr.magic != ELF_MAGIC) return EL_NOTELF;
+  return EL_OK;
+}
+
 //
 // load the elf segments to memory regions.
 //
@@ -69,7 +90,7 @@ elf_status elf_load(elf_ctx *ctx) {
   // traverse the elf program segment headers
   for (i = 0, off = ctx->ehdr.phoff; i < ctx->ehdr.phnum; i++, off += sizeof(ph_addr)) {
     // read segment headers
-    if (elf_fpread(ctx, (void *)&ph_addr, sizeof(ph_addr), off) != sizeof(ph_addr)) return EL_EIO;
+    if (elf_fpread_vfs(ctx, (void *)&ph_addr, sizeof(ph_addr), off) != sizeof(ph_addr)) return EL_EIO;
 
     if (ph_addr.type != ELF_PROG_LOAD) continue;
     if (ph_addr.memsz < ph_addr.filesz) return EL_ERR;
@@ -79,7 +100,7 @@ elf_status elf_load(elf_ctx *ctx) {
     void *dest = elf_alloc_mb(ctx, ph_addr.vaddr, ph_addr.vaddr, ph_addr.memsz);
 
     // actual loading
-    if (elf_fpread(ctx, dest, ph_addr.memsz, ph_addr.off) != ph_addr.memsz)
+    if (elf_fpread_vfs(ctx, dest, ph_addr.memsz, ph_addr.off) != ph_addr.memsz)
       return EL_EIO;
 
     // record the vm region in proc->mapped_info. added @lab3_1
@@ -115,7 +136,7 @@ void load_bincode_from_host_elf(process *p, char *filename) {
   //elf loading. elf_ctx is defined in kernel/elf.h, used to track the loading process.
   elf_ctx elfloader;
   // elf_info is defined above, used to tie the elf file and its corresponding process.
-  elf_info info;
+  elf_info_vfs info;
 
   info.f = vfs_open(filename, O_RDONLY);
   info.p = p;
@@ -123,7 +144,7 @@ void load_bincode_from_host_elf(process *p, char *filename) {
   if (IS_ERR_VALUE(info.f)) panic("Fail on openning the input application program.\n");
 
   // init elfloader context. elf_init() is defined above.
-  if (elf_init(&elfloader, &info) != EL_OK)
+  if (elf_init_vfs(&elfloader, &info) != EL_OK)
     panic("fail to init elfloader.\n");
 
   // load elf. elf_load() is defined above.

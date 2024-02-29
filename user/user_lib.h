@@ -13,7 +13,7 @@ void* naive_malloc();
 void naive_free(void* va);
 int fork();
 void yield();
-
+int exec(const char* path);
 // added @ lab4_1
 int open(const char *pathname, int flags);
 int read_u(int fd, void *buf, uint64 count);
@@ -32,7 +32,6 @@ int closedir_u(int fd);
 // added @ lab4_3
 int link_u(const char *fn1, const char *fn2);
 int unlink_u(const char *fn);
-
 
 #endif
 int wait(int pid);
