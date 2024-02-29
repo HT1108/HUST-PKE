@@ -79,6 +79,7 @@ void init_proc_pool() {
   for (int i = 0; i < NPROC; ++i) {
     procs[i].status = FREE;
     procs[i].pid = i;
+    procs[i].waitpid = -2;
   }
 }
 
@@ -168,7 +169,17 @@ int free_process( process* proc ) {
   // but for proxy kernel, it (memory leaking) may NOT be a really serious issue,
   // as it is different from regular OS, which needs to run 7x24.
   proc->status = ZOMBIE;
+  for (int i = NPROC - 1; i >= 0; i--) {
+    if (procs[i].waitpid == proc->pid && procs[i].status == BLOCKED) {
+      insert_to_ready_queue(&procs[i]);
+      
+    }
+    else if (procs[i].waitpid == -1 && procs[i].status == BLOCKED && proc->parent == &procs[i]) {
+      insert_to_ready_queue(&procs[i]);
+      
+    }
 
+  }
   return 0;
 }
 
@@ -210,7 +221,7 @@ int do_fork( process* parent)
           int index = (parent->user_heap.free_pages_address[i] - heap_bottom) / PGSIZE;
           free_block_filter[index] = 1;
         }
-
+        
         // copy and map the heap blocks
         for (uint64 heap_block = current->user_heap.heap_bottom;
              heap_block < current->user_heap.heap_top; heap_block += PGSIZE) {
@@ -243,13 +254,24 @@ int do_fork( process* parent)
         uint64 pa = lookup_pa(parent->pagetable, parent->mapped_info[i].va);
 
         user_vm_map(child->pagetable, parent->mapped_info[i].va, PGSIZE, pa, prot_to_type(PROT_WRITE | PROT_READ | PROT_EXEC, 1));
-
+        
         // after mapping, register the vm region (do not delete codes below!)
         child->mapped_info[child->total_mapped_region]
             .va = parent->mapped_info[i].va;
         child->mapped_info[child->total_mapped_region].npages =
           parent->mapped_info[i].npages;
         child->mapped_info[child->total_mapped_region].seg_type = CODE_SEGMENT;
+        child->total_mapped_region++;
+        break;
+      }
+      case DATA_SEGMENT: {
+        uint64 va = parent->mapped_info[i].va;
+        uint64 pa = (uint64)alloc_page();
+        user_vm_map(child->pagetable, va, PGSIZE, pa, prot_to_type(PROT_READ | PROT_WRITE, 1));
+        memcpy((void*)pa, (void*)lookup_pa(parent->pagetable, parent->mapped_info[i].va), PGSIZE);
+        child->mapped_info[child->total_mapped_region].va = va;
+        child->mapped_info[child->total_mapped_region].npages = parent->mapped_info[i].npages;
+        child->mapped_info[child->total_mapped_region].seg_type = DATA_SEGMENT;
         child->total_mapped_region++;
         break;
       }
@@ -262,4 +284,52 @@ int do_fork( process* parent)
   insert_to_ready_queue( child );
 
   return child->pid;
+}
+
+int do_wait(int pid) {
+  // illegal pid
+  if (pid < -1 || pid >= NPROC || procs[pid].status == FREE) {
+    return -1;
+  }
+  else if (pid > 0 && procs[pid].parent != current) {
+    return -1;
+  }
+
+  current->waitpid = pid;
+
+  if (pid == -1) {
+    int lastStatus[NPROC];
+    for (int i = 0; i < NPROC; i++) {
+      lastStatus[i] = procs[i].status;
+    }
+    while (TRUE) {
+      for (int i = 0; i < NPROC; i++) {
+        if (procs[i].status != lastStatus[i] && procs[i].status == ZOMBIE) {
+          
+          insert_to_ready_queue(current);
+          schedule();
+          return i;
+        }
+        lastStatus[i] = procs[i].status;
+        //yield
+        current->status = BLOCKED;
+        //insert_to_ready_queue(current);
+        schedule();
+      }
+    }
+  } else {
+    while (TRUE) {
+      if (procs[pid].status == ZOMBIE) {
+        
+        insert_to_ready_queue(current);
+        schedule();
+        return pid;
+      }
+      //yield
+      current->status = BLOCKED;
+      //insert_to_ready_queue(current);
+      schedule();
+    }
+  }
+
 }

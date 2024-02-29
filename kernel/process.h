@@ -87,7 +87,7 @@ typedef struct process_t {
   struct process_t *parent;
   // next queue element
   struct process_t *queue_next;
-
+  int waitpid;
   // accounting. added @lab3_3
   int tick_count;
 
@@ -106,7 +106,8 @@ process* alloc_process();
 int free_process( process* proc );
 // fork a child from parent
 int do_fork(process* parent);
-
+//wait added @lab3_challenge1
+int do_wait(int pid);
 // current running process
 extern process* current;
 
