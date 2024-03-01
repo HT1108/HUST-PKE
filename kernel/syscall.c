@@ -223,7 +223,6 @@ ssize_t sys_user_unlink(char * vfn){
 }
 
 int sys_user_wait(int pid) {
-  
   return do_wait(pid);
 }
 
@@ -247,15 +246,18 @@ int reload_elf(elf_ctx* ctx) {
   elf_prog_header ph_addr;
   int i, off;
   process* proc = (process*)(((elf_info_vfs*)(ctx->info))->p);
+  int unmap_cnt = 0;
   for (int i = 0; i < proc->total_mapped_region; i++) {
     if (proc->mapped_info[i].seg_type == CODE_SEGMENT || proc->mapped_info[i].seg_type == DATA_SEGMENT) {
-    
-      user_vm_unmap((pagetable_t)proc->pagetable, proc->mapped_info[i].va, PGSIZE, 1);
+      user_vm_unmap((pagetable_t)proc->pagetable, proc->mapped_info[i].va, PGSIZE, 0);
       proc->mapped_info[i].va = 0;
-      proc->total_mapped_region--;
+      proc->mapped_info[i].npages = 0;
+      unmap_cnt++;
     }
   }
-  
+  proc->total_mapped_region -= unmap_cnt;
+
+
   // traverse the elf program segment headers
   for (i = 0, off = ctx->ehdr.phoff; i < ctx->ehdr.phnum; i++, off += sizeof(ph_addr)) {
     
@@ -272,20 +274,23 @@ int reload_elf(elf_ctx* ctx) {
       if (elf_fpread_vfs(ctx, dest, ph_addr.memsz, ph_addr.off) != ph_addr.memsz)
         return EL_EIO;
       user_vm_map((pagetable_t)proc->pagetable, ph_addr.vaddr, PGSIZE, (uint64)dest, prot_to_type(PROT_EXEC | PROT_READ, 1));
-      
-      ((process*)(((elf_info_vfs*)(ctx->info))->p))->mapped_info[j].va = ph_addr.vaddr;
+      proc->mapped_info[j].npages++;
+      proc->mapped_info[j].va = ph_addr.vaddr;
       proc->total_mapped_region++;
       sprint("CODE_SEGMENT added at mapped info offset:%d\n", j);
     }
     else if (ph_addr.flags == (SEGMENT_READABLE | SEGMENT_WRITABLE)) {
+
       for (j = 0; j < PGSIZE / sizeof(mapped_region); j++) //seek the last mapped region
         if ((process*)(((elf_info_vfs*)(ctx->info))->p)->mapped_info[j].va == 0x0) break;
       dest = alloc_page();
       if (elf_fpread_vfs(ctx, dest, ph_addr.memsz, ph_addr.off) != ph_addr.memsz)
         return EL_EIO;
-      user_vm_map((pagetable_t)proc->pagetable, ph_addr.vaddr, PGSIZE, (uint64)dest, prot_to_type(PROT_WRITE | PROT_READ, 1));
-      ((process*)(((elf_info_vfs*)(ctx->info))->p))->mapped_info[j].va = ph_addr.vaddr;
-    
+
+      user_vm_map(proc->pagetable, ROUNDDOWN(ph_addr.vaddr, PGSIZE), PGSIZE, (uint64)dest, prot_to_type(PROT_WRITE | PROT_READ, 1));
+
+      proc->mapped_info[j].va = ph_addr.vaddr;
+
       proc->total_mapped_region++;
       sprint("DATA_SEGMENT added at mapped info offset:%d\n", j);
     }
@@ -295,7 +300,7 @@ int reload_elf(elf_ctx* ctx) {
   return 0;
 }
 
-ssize_t sys_user_exec(uint64 path) {
+ssize_t sys_user_exec(uint64 path, uint64 para) {
   
   elf_ctx elfloader;
   memset(&elfloader, 0, sizeof(elfloader));
@@ -307,8 +312,15 @@ ssize_t sys_user_exec(uint64 path) {
   if (info.f == -1) panic("file open failed");
   if (elf_init_vfs(&elfloader, &info) != EL_OK)
     panic("fail to init elfloader.\n");
+  sprint("exec:%s\n", (char*)user_va_to_pa(current->pagetable, (void*)path));
   reload_elf(&elfloader);
   current->trapframe->epc = elfloader.ehdr.entry;
+  void* parapa = user_va_to_pa(current->pagetable, (void*)para);
+
+  uint64 newpage = sys_user_allocate_page();
+  uint64 newpagepa = lookup_pa(current->pagetable, newpage);
+  *(uint64*)newpagepa = para;
+  current->trapframe->regs.a1 = (uint64)newpage;
   do_close(info.f);
   return 0;
 }
@@ -364,7 +376,7 @@ long do_syscall(long a0, long a1, long a2, long a3, long a4, long a5, long a6, l
     case SYS_user_wait:
       return sys_user_wait(a1);
     case SYS_user_exec:
-      return sys_user_exec(a1);
+      return sys_user_exec(a1, a2);
     default:
       panic("Unknown syscall %ld \n", a0);
   }

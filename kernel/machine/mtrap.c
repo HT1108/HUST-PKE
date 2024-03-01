@@ -1,7 +1,7 @@
 #include "kernel/riscv.h"
 #include "kernel/process.h"
 #include "spike_interface/spike_utils.h"
-
+#include "kernel/vmm.h"
 static void handle_instruction_access_fault() { panic("Instruction access fault!"); }
 
 static void handle_load_access_fault() { panic("Load access fault!"); }
@@ -12,7 +12,18 @@ static void handle_illegal_instruction() { panic("Illegal instruction!"); }
 
 static void handle_misaligned_load() { panic("Misaligned Load!"); }
 
-static void handle_misaligned_store() { panic("Misaligned AMO!"); }
+static void handle_misaligned_store() {
+
+  for (int i = 0; i < current->total_mapped_region; i++) {
+    if (current->mapped_info[i].seg_type == CODE_SEGMENT) {
+      uint64 pa = lookup_pa(current->pagetable, current->mapped_info[i].va);
+      sprint("%x\n", pa);
+      sprint("%x\n", read_csr(mepc));
+    }
+  }
+  
+  panic("Misaligned AMO!");
+}
 
 // added @lab1_3
 static void handle_timer() {

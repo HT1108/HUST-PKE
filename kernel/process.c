@@ -17,7 +17,7 @@
 #include "memlayout.h"
 #include "sched.h"
 #include "spike_interface/spike_utils.h"
-
+#include "util/functions.h"
 //Two functions defined in kernel/usertrap.S
 extern char smode_trap_vector[];
 extern void return_to_user(trapframe *, uint64 satp);
@@ -172,11 +172,13 @@ int free_process( process* proc ) {
   for (int i = NPROC - 1; i >= 0; i--) {
     if (procs[i].waitpid == proc->pid && procs[i].status == BLOCKED) {
       insert_to_ready_queue(&procs[i]);
-      
+      procs[i].status = READY;
+      break;
     }
     else if (procs[i].waitpid == -1 && procs[i].status == BLOCKED && proc->parent == &procs[i]) {
       insert_to_ready_queue(&procs[i]);
-      
+      procs[i].status = READY;
+      break;
     }
 
   }
@@ -267,7 +269,7 @@ int do_fork( process* parent)
       case DATA_SEGMENT: {
         uint64 va = parent->mapped_info[i].va;
         uint64 pa = (uint64)alloc_page();
-        user_vm_map(child->pagetable, va, PGSIZE, pa, prot_to_type(PROT_READ | PROT_WRITE, 1));
+        user_vm_map(child->pagetable, ROUNDDOWN(va, PGSIZE), PGSIZE, pa, prot_to_type(PROT_READ | PROT_WRITE, 1));
         memcpy((void*)pa, (void*)lookup_pa(parent->pagetable, parent->mapped_info[i].va), PGSIZE);
         child->mapped_info[child->total_mapped_region].va = va;
         child->mapped_info[child->total_mapped_region].npages = parent->mapped_info[i].npages;
@@ -332,4 +334,6 @@ int do_wait(int pid) {
     }
   }
 
+
+  return 0;
 }
