@@ -312,7 +312,7 @@ ssize_t sys_user_exec(uint64 path, uint64 para) {
   if (info.f == -1) panic("file open failed");
   if (elf_init_vfs(&elfloader, &info) != EL_OK)
     panic("fail to init elfloader.\n");
-  sprint("Application:%s\n", (char*)user_va_to_pa(current->pagetable, (void*)path));
+  sprint("Application: %s\n", (char*)user_va_to_pa(current->pagetable, (void*)path));
   reload_elf(&elfloader);
   current->trapframe->epc = elfloader.ehdr.entry;
   sprint("Application program entry point (virtual address): 0x%lx\n", elfloader.ehdr.entry);
