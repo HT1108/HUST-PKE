@@ -19,7 +19,7 @@
 ssize_t sys_user_print(const char* buf, size_t n) {
   uint64 hartid;
   asm volatile("mv %0, tp" : "=r"(hartid));
-  sprint("hartid = %d: %s\n", hartid, buf);
+  sprint("hartid = %d: %s", hartid, buf);
   return 0;
 }
 
