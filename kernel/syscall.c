@@ -315,7 +315,7 @@ ssize_t sys_user_exec(uint64 path, uint64 para) {
   sprint("Application:%s\n", (char*)user_va_to_pa(current->pagetable, (void*)path));
   reload_elf(&elfloader);
   current->trapframe->epc = elfloader.ehdr.entry;
-  sprint("Application program entry point (virtual address): 0x%lx", elfloader.ehdr.entry);
+  sprint("Application program entry point (virtual address): 0x%lx\n", elfloader.ehdr.entry);
   void* parapa = user_va_to_pa(current->pagetable, (void*)para);
 
   uint64 newpage = sys_user_allocate_page();
